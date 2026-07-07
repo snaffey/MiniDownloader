@@ -8,12 +8,15 @@ import os
 import re
 import threading
 import tkinter as tk
+import webbrowser
 from tkinter import messagebox
 
 import customtkinter as ctk
 
 from src.core.config import AppConfig, load_config, save_config
 from src.core.models import JobPriority
+from src.core.updater import check_for_updates
+from src.version import __version__
 from src.ui.theme import Colors, Dimensions, Fonts
 
 
@@ -134,6 +137,10 @@ class SettingsWindow(ctk.CTkToplevel):
         self._option_row(container, "Appearance mode", self._vars["appearance_mode"], ["dark", "light", "system"])
         self._slider_row(container, "UI scale", self._vars["ui_scale"], 0.8, 1.4)
         self._checkbox_row(container, "High contrast colors", self._vars["high_contrast"])
+
+        self._section_title(container, "About & Updates")
+        self._action_row(container, f"MiniDownloader v{__version__}", "Check for Updates", self._check_updates_clicked)
+        self._action_row(container, "GitHub Repository & Releases", "Open GitHub", self._open_github)
 
         btn_row = ctk.CTkFrame(container, fg_color="transparent")
         btn_row.pack(fill="x", pady=(Dimensions.PAD_LG, 0))
@@ -513,3 +520,19 @@ class SettingsWindow(ctk.CTkToplevel):
         if profile:
             return f"{browser}:{profile}"
         return browser
+
+    def _open_github(self):
+        webbrowser.open("https://github.com/snaffey/MiniDownloader/releases")
+
+    def _check_updates_clicked(self):
+        def _check():
+            info = check_for_updates()
+            if info.available:
+                self.after(0, lambda: self._show_update_dialog(info))
+            else:
+                self.after(0, lambda: messagebox.showinfo("Update Check", f"You are running the latest version (v{__version__})."))
+        threading.Thread(target=_check, daemon=True).start()
+
+    def _show_update_dialog(self, info):
+        if messagebox.askyesno("Update Available", f"A new version ({info.latest_version}) is available!\n\nWould you like to open the release page to download it?"):
+            webbrowser.open(info.url)

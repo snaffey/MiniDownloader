@@ -82,6 +82,10 @@ class Fonts:
         return (cls.FAMILY, cls.SIZE_SMALL)
 
     @classmethod
+    def small_bold(cls):
+        return (cls.FAMILY, cls.SIZE_SMALL, "bold")
+
+    @classmethod
     def tiny(cls):
         return (cls.FAMILY, cls.SIZE_TINY)
 

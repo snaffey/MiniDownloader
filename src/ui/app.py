@@ -33,6 +33,7 @@ from src.core.searcher import search_and_match
 from src.core.downloader import download_track, DownloadCancelledError
 from src.core.tagger import tag_file
 from src.core.yt_dlp_config import apply_yt_dlp_cookies
+from src.core.updater import check_for_updates
 from src.ui.theme import Colors, Dimensions, Fonts, apply_high_contrast
 from src.ui.widgets import URLInputBar, FormatSelector, DownloadQueue
 from src.ui.tray import TrayManager
@@ -93,6 +94,9 @@ class MiniDownloaderApp(ctk.CTk):
 
         if self._config.tray_enabled:
             self._init_tray()
+
+        # Check for updates asynchronously after startup
+        self.after(3000, self._check_startup_updates)
 
     def _build_ui(self):
         """Construct the full UI layout."""
@@ -1208,6 +1212,31 @@ class MiniDownloaderApp(ctk.CTk):
                 continue
             self._add_job_from_import(job)
         self._update_queue_count()
+
+    def _check_startup_updates(self):
+        def _check():
+            info = check_for_updates()
+            if info.available:
+                self.after(0, lambda: self._show_update_badge(info))
+        threading.Thread(target=_check, daemon=True).start()
+
+    def _show_update_badge(self, info):
+        import webbrowser
+        try:
+            update_btn = ctk.CTkButton(
+                self._checker_btn.master,
+                text=f"🎉 {info.latest_version} Available",
+                height=28,
+                font=Fonts.small_bold(),
+                fg_color=Colors.ACCENT,
+                hover_color=Colors.ACCENT_HOVER,
+                text_color=Colors.BG_DARK,
+                corner_radius=Dimensions.RADIUS_SM,
+                command=lambda: webbrowser.open(info.url),
+            )
+            update_btn.pack(side="left", padx=(0, 8), before=self._checker_btn)
+        except Exception as e:
+            logger.error("Failed to display update badge: %s", e)
 
     def destroy(self):
         """Clean up thread pool on exit."""
