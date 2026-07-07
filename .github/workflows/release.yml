@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag name (e.g. v1.0.0). Leave blank to auto-use src/version.py'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -94,9 +99,24 @@ jobs:
           path: ./artifacts
           merge-multiple: true
 
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            echo "tag=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            VER=$(python3 -c "from src.version import __version__; print(f'v{__version__}')")
+            echo "tag=$VER" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           files: |
             ./artifacts/*
           generate_release_notes: true
