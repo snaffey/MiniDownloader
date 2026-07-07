@@ -20,7 +20,6 @@ Thumbs.db
 # Build & Packaging
 build/
 dist/
-*.spec
 
 # Project & Sensitive Data
 cookies.txt
